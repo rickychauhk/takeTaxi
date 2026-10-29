@@ -1,0 +1,40 @@
+{
+  "name": "taxima",
+  "private": true,
+  "version": "0.1.0-uat",
+  "description": "Taxi MA — API, CRM/CMS (UAT + PROD scaffold)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @taxima/api && npm run build -w @taxima/crm",
+    "dev:api": "npm run start:dev -w @taxima/api",
+    "dev:crm": "npm run dev -w @taxima/crm",
+    "dev:passenger": "npm run start --prefix apps/passenger",
+    "dev:driver": "npm run start --prefix apps/driver",
+    "ios:passenger": "npm run ios --prefix apps/passenger",
+    "ios:driver": "npm run ios --prefix apps/driver",
+    "android:driver": "npm run android --prefix apps/driver",
+    "ios": "npm run ios:driver",
+    "android": "npm run android:driver",
+    "lint": "npm run lint -w @taxima/api && npm run lint -w @taxima/crm",
+    "docker:uat:up": "docker-compose -f docker-compose.uat.yml --env-file .env.uat up -d --build",
+    "docker:uat:down": "docker-compose -f docker-compose.uat.yml down",
+    "docker:prod:up": "docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d --build",
+    "docker:prod:down": "docker-compose -f docker-compose.prod.yml down",
+    "postinstall": "patch-package"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "overrides": {
+    "expo": "~57.0.27",
+    "expo-keep-awake": "57.0.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.12.9",
+    "expo": "~57.0.27",
+    "patch-package": "^8.0.1"
+  }
+}

@@ -1,0 +1,55 @@
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "127.0.0.1:${MYSQL_HOST_PORT:-3311}:3306"
+    volumes:
+      - taxima_uat_mysql_data:/var/lib/mysql
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile.prebuilt
+    restart: unless-stopped
+    env_file:
+      - .env.uat
+    environment:
+      NODE_ENV: production
+      TAXIMA_ENV: uat
+      PORT: "3000"
+      DATABASE_HOST: mysql
+      DATABASE_PORT: "3306"
+      DATABASE_NAME: ${MYSQL_DATABASE}
+      DATABASE_USER: ${MYSQL_USER}
+      DATABASE_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "127.0.0.1:${API_HOST_PORT:-3200}:3000"
+    volumes:
+      - taxima_uat_uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  crm:
+    build:
+      context: .
+      dockerfile: docker/crm/Dockerfile.prebuilt
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${CRM_HOST_PORT:-3201}:80"
+
+volumes:
+  taxima_uat_mysql_data:
+  taxima_uat_uploads:

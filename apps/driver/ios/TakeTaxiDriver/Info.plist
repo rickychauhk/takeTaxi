@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Take Taxi Driver</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>taxima-driver</string>
+				<string>online.hktaketaxi.driverapp</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>telprompt</string>
+		<string>comgooglemaps</string>
+		<string>maps</string>
+		<string>iosamap</string>
+		<string>amapuri</string>
+	</array>
+	<key>LSMinimumSystemVersion</key>
+	<string>12.0</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>搭的司機版需要相機以拍攝行車證或入數證明。</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>搭的司機版需要背景定位，以便你收 App 時仍能收到附近柯打 push。</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Allow $(PRODUCT_NAME) to access your location</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>搭的司機版需要位置權限才能上線接單；乘客會透過 App 查看你的即時位置。</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>搭的司機版需要麥克風，以便在出貨頁以語音輸入起點與目的地。</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Allow $(PRODUCT_NAME) to detect your current motion activity</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>搭的司機版需要將相片儲存至相簿（如有需要）。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>搭的司機版需要存取相簿以上傳行車證或入數證明。</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>搭的司機版需要語音辨識，以便在出貨頁以語音輸入起點與目的地。</string>
+	<key>OneSignal_app_groups_key</key>
+	<string>group.online.hktaketaxi.driverapp.onesignal</string>
+	<key>RCTMetroPort</key>
+	<string>$(RCT_METRO_PORT)</string>
+	<key>RCTNewArchEnabled</key>
+	<true/>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>EXExpoAppSceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+		<string>fetch</string>
+	</array>
+	<key>UILaunchStoryboardName</key>
+	<string>SplashScreen</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+	</array>
+	<key>UIRequiresFullScreen</key>
+	<false/>
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleDefault</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UIUserInterfaceStyle</key>
+	<string>Dark</string>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+</dict>
+</plist>

@@ -1,0 +1,78 @@
+diff --git a/node_modules/expo-firebase-core/ios/EXFirebaseCore.podspec b/node_modules/expo-firebase-core/ios/EXFirebaseCore.podspec
+index 66986e8..1beac64 100644
+--- a/node_modules/expo-firebase-core/ios/EXFirebaseCore.podspec
++++ b/node_modules/expo-firebase-core/ios/EXFirebaseCore.podspec
+@@ -2,7 +2,7 @@ require 'json'
+ 
+ package = JSON.parse(File.read(File.join(__dir__, '..', 'package.json')))
+ 
+-firebase_sdk_version = '9.5.0'
++firebase_sdk_version = '12.10.0'
+ if defined? $FirebaseSDKVersion
+   firebase_sdk_version = $FirebaseSDKVersion
+ end
+diff --git a/node_modules/expo-firebase-core/ios/EXFirebaseCore/EXFirebaseCore+FIROptions.m b/node_modules/expo-firebase-core/ios/EXFirebaseCore/EXFirebaseCore+FIROptions.m
+index 22cb7fc..cf85d74 100644
+--- a/node_modules/expo-firebase-core/ios/EXFirebaseCore/EXFirebaseCore+FIROptions.m
++++ b/node_modules/expo-firebase-core/ios/EXFirebaseCore/EXFirebaseCore+FIROptions.m
+@@ -14,35 +14,30 @@ + (BOOL)areFirOptions:(nullable FIROptions *)options1 equalTo:(nullable FIROptio
+ {
+   if (options1 == options2) return YES;
+   if (!options1 || !options2) return NO;
+-  return [self.class compareString:options1.androidClientID to:options2.androidClientID]
+-    && [self.class compareString:options1.APIKey to:options2.APIKey]
++  return [self.class compareString:options1.APIKey to:options2.APIKey]
+     && [self.class compareString:options1.appGroupID to:options2.appGroupID]
+     && [self.class compareString:options1.bundleID to:options2.bundleID]
+     && [self.class compareString:options1.clientID to:options2.clientID]
+     && [self.class compareString:options1.databaseURL to:options2.databaseURL]
+-    && [self.class compareString:options1.deepLinkURLScheme to:options2.deepLinkURLScheme]
+     && [self.class compareString:options1.GCMSenderID to:options2.GCMSenderID]
+     && [self.class compareString:options1.googleAppID to:options2.googleAppID]
+     && [self.class compareString:options1.projectID to:options2.projectID]
+-    && [self.class compareString:options1.storageBucket to:options2.storageBucket]
+-    && [self.class compareString:options1.trackingID to:options2.trackingID];
++    && [self.class compareString:options1.storageBucket to:options2.storageBucket];
+ }
+ 
+ + (nonnull NSDictionary *)firOptionsToJSON:(nonnull FIROptions *)options
+ {
+   NSMutableDictionary* json = [NSMutableDictionary dictionary];
+ 
+-  if (options.androidClientID) [json setValue:options.androidClientID forKey:@"androidClientId"];
+   if (options.APIKey) [json setValue:options.APIKey forKey:@"apiKey"];
+   if (options.googleAppID) [json setValue:options.googleAppID forKey:@"appId"];
+   if (options.clientID) [json setValue:options.clientID forKey:@"clientId"];
+   if (options.databaseURL) [json setValue:options.databaseURL forKey:@"databaseURL"];
+-  if (options.deepLinkURLScheme) [json setValue:options.deepLinkURLScheme forKey:@"deepLinkUrlScheme"];
+   if (options.GCMSenderID) [json setValue:options.GCMSenderID forKey:@"messagingSenderId"];
+   if (options.projectID) [json setValue:options.projectID forKey:@"projectId"];
+   if (options.storageBucket) [json setValue:options.storageBucket forKey:@"storageBucket"];
+-  if (options.trackingID) [json setValue:options.trackingID forKey:@"trackingId"];
+-  if (options.appGroupID) [json setValue:options.trackingID forKey:@"appGroupId"];
++  if (options.appGroupID) [json setValue:options.appGroupID forKey:@"appGroupId"];
++  if (options.bundleID) [json setValue:options.bundleID forKey:@"bundleId"];
+ 
+   return json;
+ }
+diff --git a/node_modules/expo-firebase-core/ios/EXFirebaseCore/EXFirebaseCore.m b/node_modules/expo-firebase-core/ios/EXFirebaseCore/EXFirebaseCore.m
+index ea03473..2d3ad69 100644
+--- a/node_modules/expo-firebase-core/ios/EXFirebaseCore/EXFirebaseCore.m
++++ b/node_modules/expo-firebase-core/ios/EXFirebaseCore/EXFirebaseCore.m
+@@ -1,6 +1,6 @@
+ // Copyright 2020-present 650 Industries. All rights reserved.
+ 
+-#import <ExpoModulesCore/EXUtilities.h>
++#import <React/RCTLog.h>
+ #import <EXFirebaseCore/EXFirebaseCore.h>
+ #import <EXFirebaseCore/EXFirebaseCore+FIROptions.h>
+ 
+@@ -66,7 +66,7 @@ - (nonnull instancetype)initWithAppName:(nonnull NSString *)name options:(nullab
+     // is the same.
+     [self.class updateAppWithOptions:options name:name completion:^(BOOL success) {
+       if (!success) {
+-        EXLogWarn(@"Failed to initialize Firebase app: %@", name);
++        RCTLogWarn(@"Failed to initialize Firebase app: %@", name);
+       }
+     }];
+   }

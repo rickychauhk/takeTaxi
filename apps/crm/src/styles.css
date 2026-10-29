@@ -1,0 +1,23 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+.taxima-html-editor .ql-container {
+  min-height: 220px;
+  font-size: 15px;
+}
+
+.taxima-html-editor .ql-editor {
+  min-height: 220px;
+}
+
+.taxima-html-editor .ql-toolbar {
+  border-radius: 8px 8px 0 0;
+}
+
+.taxima-html-editor .ql-container {
+  border-radius: 0 0 8px 8px;
+}

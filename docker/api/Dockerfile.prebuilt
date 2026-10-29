@@ -1,0 +1,12 @@
+FROM node:20-alpine
+WORKDIR /app
+COPY package.json package-lock.json* ./
+COPY apps/api/package.json apps/api/
+COPY packages/shared/package.json packages/shared/
+RUN npm install --omit=dev
+COPY packages/shared/dist packages/shared/dist
+COPY apps/api/dist apps/api/dist
+RUN mkdir -p /app/uploads
+ENV NODE_ENV=production
+EXPOSE 3000
+CMD ["node", "apps/api/dist/main.js"]

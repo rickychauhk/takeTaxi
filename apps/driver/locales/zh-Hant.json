@@ -1,0 +1,10 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "搭的司機版",
+    "NSLocationWhenInUseUsageDescription": "搭的司機版需要位置權限才能上線接單；乘客會透過 App 查看你的即時位置。"
+  },
+  "android": {
+    "app_name": "搭的司機版",
+    "NSLocationWhenInUseUsageDescription": "搭的司機版需要位置權限才能上線接單；乘客會透過 App 查看你的即時位置。"
+  }
+}

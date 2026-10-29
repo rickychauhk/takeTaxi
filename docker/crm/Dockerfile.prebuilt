@@ -1,0 +1,4 @@
+FROM nginx:1.27-alpine
+COPY docker/crm/nginx.conf /etc/nginx/conf.d/default.conf
+COPY apps/crm/dist /usr/share/nginx/html
+EXPOSE 80

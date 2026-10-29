@@ -1,0 +1,10 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "搭的乘客版",
+    "NSLocationWhenInUseUsageDescription": "搭的 需要你的位置以顯示上車點及附近司機。"
+  },
+  "android": {
+    "app_name": "搭的乘客版",
+    "NSLocationWhenInUseUsageDescription": "搭的 需要你的位置以顯示上車點及附近司機。"
+  }
+}

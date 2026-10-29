@@ -1,0 +1,13 @@
+diff --git a/node_modules/expo/ios/AppDelegates/ExpoAppSceneDelegate.swift b/node_modules/expo/ios/AppDelegates/ExpoAppSceneDelegate.swift
+index 1111111..2222222 100644
+--- a/node_modules/expo/ios/AppDelegates/ExpoAppSceneDelegate.swift
++++ b/node_modules/expo/ios/AppDelegates/ExpoAppSceneDelegate.swift
+@@ -34,7 +34,7 @@ open class ExpoAppSceneDelegate: UIResponder, UIWindowSceneDelegate {
+     guard let appDelegate = UIApplication.shared.delegate as? ExpoAppDelegate,
+       let provider = appDelegate as? ExpoReactNativeFactoryProvider,
+       let factory = provider.reactNativeFactory else {
+-      fatalError(2
++      fatalError(
+         "ExpoAppSceneDelegate couldn't start React Native because the app delegate isn't an "
+         + "ExpoAppDelegate that provides a React Native factory. Make sure your AppDelegate subclasses "
+         + "ExpoAppDelegate, conforms to ExpoReactNativeFactoryProvider and creates its "

@@ -1,0 +1,10 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "Take Taxi Passenger",
+    "NSLocationWhenInUseUsageDescription": "TakeTaxi needs your location to show pickup point and nearby drivers."
+  },
+  "android": {
+    "app_name": "Take Taxi Passenger",
+    "NSLocationWhenInUseUsageDescription": "TakeTaxi needs your location to show pickup point and nearby drivers."
+  }
+}

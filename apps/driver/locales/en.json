@@ -1,0 +1,10 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "Take Taxi Driver",
+    "NSLocationWhenInUseUsageDescription": "Take Taxi Driver needs location access to go online and accept orders; passengers see your live position in the app."
+  },
+  "android": {
+    "app_name": "Take Taxi Driver",
+    "NSLocationWhenInUseUsageDescription": "Take Taxi Driver needs location access to go online and accept orders; passengers see your live position in the app."
+  }
+}

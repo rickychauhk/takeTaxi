@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+.env
+.env.uat
+.env.prod
+*.log
+.DS_Store
+coverage/
+uploads/
+.data/
+*.pem

@@ -1,0 +1,4 @@
+<resources>
+  <string name="app_name">Take Taxi Driver</string>
+  <string name="onesignal_notification_accent_color">FFF73A0B</string>
+</resources>

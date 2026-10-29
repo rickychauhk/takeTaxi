@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "412124194923",
+    "firebase_url": "https://singkee-driver.firebaseio.com",
+    "project_id": "singkee-driver",
+    "storage_bucket": "singkee-driver.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:412124194923:android:YOUR_PASSENGER_ANDROID_APP_ID",
+        "android_client_info": {
+          "package_name": "online.hktaketaxi.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "YOUR_ANDROID_API_KEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

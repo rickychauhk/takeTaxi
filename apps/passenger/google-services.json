@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "38342370957",
+    "project_id": "taketaxionlinemain",
+    "storage_bucket": "taketaxionlinemain.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:38342370957:android:1899e7fbe8d12395cf64c4",
+        "android_client_info": {
+          "package_name": "online.hktaketaxi.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB8ac9bgCGpd8iZepn2fqacsxtWKfM-5eU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
