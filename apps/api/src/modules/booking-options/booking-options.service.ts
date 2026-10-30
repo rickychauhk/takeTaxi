@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { SettingsService } from '../settings/settings.service';
 import { BookingOptionCategoryEntity } from './booking-option-category.entity';
 import { BookingOptionEntity } from './booking-option.entity';
 
@@ -11,15 +12,18 @@ export class BookingOptionsService {
     private readonly categories: Repository<BookingOptionCategoryEntity>,
     @InjectRepository(BookingOptionEntity)
     private readonly options: Repository<BookingOptionEntity>,
+    private readonly settings: SettingsService,
   ) {}
 
   async listForPassenger() {
+    const scheduledEnabled = await this.settings.isScheduledOrdersEnabled();
     const rows = await this.categories.find({
       where: { isActive: true },
       relations: { options: true },
       order: { sortOrder: 'ASC', options: { sortOrder: 'ASC' } },
     });
     return {
+      scheduledOrdersEnabled: scheduledEnabled,
       categories: rows.map((c) => ({
         id: c.id,
         code: c.code,
@@ -31,6 +35,7 @@ export class BookingOptionsService {
         sortOrder: c.sortOrder,
         options: (c.options ?? [])
           .filter((o) => o.isActive)
+          .filter((o) => scheduledEnabled || !(c.code === 'booking_time' && o.code === 'scheduled'))
           .sort((a, b) => a.sortOrder - b.sortOrder)
           .map((o) => ({
             id: o.id,

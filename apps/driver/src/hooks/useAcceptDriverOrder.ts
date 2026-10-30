@@ -12,13 +12,20 @@ import {
   ensureDriverForegroundLocation,
   postImmediateDriverLocation,
 } from '../location/requireDriverLocation';
+import { isFutureScheduledOffer } from '../geo/orderPickupDistance';
 import { navigationRef } from '../navigation/navigationRef';
 import type { OrderOffer } from '../types/order';
 
 export type AcceptOfferOptions = {
   /** 預約「接受預約」：只鎖單，不進行程頁 */
   reserveOnly?: boolean;
+  /** 已接預約、「開始接客」：active API 不返 future scheduled，直接進行程 */
+  startScheduledTrip?: boolean;
 };
+
+function isReservedScheduledOffer(offer: OrderOffer): boolean {
+  return offer.orderStatus === 'accepted' && !!offer.scheduledAt?.trim();
+}
 
 function mergeOfferForTrip(base: OrderOffer, fallback: OrderOffer): OrderOffer {
   return {
@@ -67,16 +74,23 @@ export function useAcceptDriverOrder() {
   const acceptOffer = useCallback(
     async (offer: OrderOffer, options?: AcceptOfferOptions): Promise<boolean> => {
       if (!driver?.id || acceptingRef.current) return false;
-      const acceptCost = acceptOrderPointsCost(offer);
-      const balance = Math.round(Number(driver.pointsBalance ?? 0));
-      if (acceptCost > 0 && balance < acceptCost) {
-        alertInsufficientAcceptPoints(acceptCost, balance, () => {
-          if (navigationRef.isReady()) {
-            navigationRef.navigate('PurchasePoints', { requiredPoints: acceptCost });
-          }
-        });
-        return false;
+
+      const startingReservedTrip =
+        !!options?.startScheduledTrip && isReservedScheduledOffer(offer);
+
+      if (!startingReservedTrip) {
+        const acceptCost = acceptOrderPointsCost(offer);
+        const balance = Math.round(Number(driver.pointsBalance ?? 0));
+        if (acceptCost > 0 && balance < acceptCost) {
+          alertInsufficientAcceptPoints(acceptCost, balance, () => {
+            if (navigationRef.isReady()) {
+              navigationRef.navigate('PurchasePoints', { requiredPoints: acceptCost });
+            }
+          });
+          return false;
+        }
       }
+
       const locOk = await ensureDriverForegroundLocation();
       if (!locOk) return false;
       const gps = await readDriverPosition();
@@ -90,25 +104,42 @@ export function useAcceptDriverOrder() {
       acceptingRef.current = true;
       setAcceptingOrderId(offer.id);
       try {
+        if (startingReservedTrip) {
+          acceptAlert({ ...offer, orderStatus: 'accepted' });
+          if (navigationRef.isReady()) {
+            navigationRef.navigate('ActiveTrip');
+          }
+          return true;
+        }
+
         await acceptDriverOrder(driver.id, offer.id, {
           lat: gps.latitude,
           lng: gps.longitude,
         });
-        if (options?.reserveOnly) {
+
+        const futureScheduled = isFutureScheduledOffer(offer);
+
+        if (options?.reserveOnly || (futureScheduled && !options?.startScheduledTrip)) {
           removeAvailableOrder(offer.id);
           return true;
         }
 
         const active = await fetchDriverActiveOrder(driver.id);
-        let tripOffer: OrderOffer;
+        let tripOffer: OrderOffer | null = null;
         if (active) {
           tripOffer = mergeOfferForTrip(mapAvailableOrderToOffer(active), offer);
-        } else if (offer.scheduledAt?.trim()) {
+        } else if (options?.startScheduledTrip || isReservedScheduledOffer(offer)) {
           tripOffer = offer;
-        } else {
+        } else if (futureScheduled) {
+          removeAvailableOrder(offer.id);
+          return true;
+        }
+
+        if (!tripOffer) {
           Alert.alert('未能接單', '此柯打已不可用（乘客可能已取消或已被接）。');
           return false;
         }
+
         acceptAlert(tripOffer);
         if (navigationRef.isReady()) {
           navigationRef.navigate('ActiveTrip');

@@ -8,7 +8,6 @@ import { useDriverSession } from '../context/DriverSessionContext';
 import {
   enrichOrdersWithPickupDistance,
   filterOrdersByPickupRadius,
-  isFutureScheduledOffer,
   orderWithinPickupRadius,
 } from '../geo/orderPickupDistance';
 import type { DriverPickupRadiusKm } from '../settings/driverPickupRadius';
@@ -62,8 +61,7 @@ function applyHallListFilter(
   maxKm: DriverPickupRadiusKm,
   driverId: string | null | undefined,
 ): OrderOffer[] {
-  const instantOnly = offers.filter((o) => !isFutureScheduledOffer(o));
-  const withDist = enrichOrdersWithPickupDistance(instantOnly, driver);
+  const withDist = enrichOrdersWithPickupDistance(offers, driver);
   return filterOrdersByPickupRadius(withDist, driver, maxKm, (o) =>
     isOwnDriverPostedHallOrder(o, driverId),
   );
@@ -282,10 +280,11 @@ export function useLiveDispatch(
   useEffect(() => {
     if (!state.online || state.activeOrder) return;
 
-    const instantOnly = rowsRef.current.filter((o) => !isFutureScheduledOffer(o));
-    const withDist = enrichOrdersWithPickupDistance(instantOnly, driverCoord);
+    const withDist = enrichOrdersWithPickupDistance(rowsRef.current, driverCoord);
     const filtered = sortHallOrdersNearestPickupFirst(
-      filterOrdersByPickupRadius(withDist, driverCoord, pickupRadiusKm),
+      filterOrdersByPickupRadius(withDist, driverCoord, pickupRadiusKm, (o) =>
+        isOwnDriverPostedHallOrder(o, driverId),
+      ),
     );
     const prevIds = rowsRef.current.map((o) => o.id).join(',');
     const nextIds = filtered.map((o) => o.id).join(',');
@@ -300,13 +299,14 @@ export function useLiveDispatch(
     const alert = state.alertOffer;
     if (
       alert &&
-      !isFutureScheduledOffer(alert) &&
       pickupRadiusKm != null &&
+      !isOwnDriverPostedHallOrder(alert, driverId) &&
       !orderWithinPickupRadius(driverCoord, alert, pickupRadiusKm)
     ) {
       rejectAlert();
     }
   }, [
+    driverId,
     driverCoord?.latitude,
     driverCoord?.longitude,
     pickupRadiusKm,

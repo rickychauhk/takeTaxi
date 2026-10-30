@@ -1,5 +1,13 @@
 type Listener = () => void;
 
+/** NetInfo：Android 常誤報 isInternetReachable=false；僅 isConnected===false 視為無網絡 */
+export function netInfoDeviceAppearsOffline(state: {
+  isConnected: boolean | null;
+  isInternetReachable?: boolean | null;
+}): boolean {
+  return state.isConnected === false;
+}
+
 let apiReachabilityDegraded = false;
 const listeners = new Set<Listener>();
 

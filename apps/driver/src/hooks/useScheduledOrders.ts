@@ -5,6 +5,7 @@ import { fetchScheduledOrders } from '../api/orders';
 import { mapAvailableOrderToOffer } from '../api/mapAvailableOrder';
 import { readDriverPosition } from '../location/readDriverPosition';
 import { subscribeScheduledOrdersRefresh } from '../realtime/driverScheduledOrdersRefresh';
+import { isDriverReservedScheduledOrder } from '../components/OrderBottomSheet';
 import type { OrderOffer } from '../types/order';
 
 const POLL_MS = 30_000;
@@ -31,7 +32,11 @@ export function useScheduledOrders(
       const fix = await readDriverPosition();
       if (fix.ok) coord = { latitude: fix.latitude, longitude: fix.longitude };
       const rows = await fetchScheduledOrders(driverId, maxPickupRadiusKm, coord);
-      setOrders(rows.map((r) => mapAvailableOrderToOffer(r, coord)));
+      setOrders(
+        rows
+          .map((r) => mapAvailableOrderToOffer(r, coord))
+          .filter(isDriverReservedScheduledOrder),
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : '無法載入預約柯打');
     } finally {

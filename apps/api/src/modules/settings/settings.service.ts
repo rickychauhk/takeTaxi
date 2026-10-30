@@ -30,6 +30,13 @@ import { SystemSettingEntity } from './system-setting.entity';
 
 export const DRIVER_POINTS_TOPUP_INSTRUCTIONS_KEY = 'driver_points_topup_instructions';
 export const DRIVER_POINTS_TOPUP_PAYMENT_METHODS_KEY = 'driver_points_topup_payment_methods';
+export const SCHEDULED_ORDERS_ENABLED_SETTING_KEY = 'scheduled_orders_enabled';
+
+export function parseScheduledOrdersEnabled(raw: string | null | undefined): boolean {
+  const v = String(raw ?? '1').trim().toLowerCase();
+  if (v === '0' || v === 'false' || v === 'off' || v === 'no') return false;
+  return true;
+}
 export const PASSENGER_COMPANY_PRICE_NOTICE_HTML_KEY = 'passenger_company_price_notice_html';
 export const PASSENGER_RIDE_TIPS_HTML_KEY = 'passenger_ride_tips_html';
 export {
@@ -217,6 +224,11 @@ export class SettingsService {
   async getDriverPointsTopupPaymentMethods(): Promise<DriverPointsTopupPaymentMethod[]> {
     const row = await this.repo.findOne({ where: { settingKey: DRIVER_POINTS_TOPUP_PAYMENT_METHODS_KEY } });
     return this.parseDriverPointsTopupPaymentMethods(row?.settingValue);
+  }
+
+  async isScheduledOrdersEnabled(): Promise<boolean> {
+    const row = await this.repo.findOne({ where: { settingKey: SCHEDULED_ORDERS_ENABLED_SETTING_KEY } });
+    return parseScheduledOrdersEnabled(row?.settingValue);
   }
 
   async getPublicDriverPointsTopupInstructions() {

@@ -47,6 +47,11 @@ import { usePassengerAuth } from '../auth/PassengerAuthContext';
 import { usePassengerLiveLocation } from '../hooks/usePassengerLiveLocation';
 import { fetchOrderChatUnreadCount } from '../api/orderChat';
 import { pingPassengerMatchingWatch } from '../api/passengerMatchingWatch';
+import {
+  clearPendingPassengerTripChat,
+  peekPendingPassengerTripChatOrderId,
+  subscribePassengerTripChatOpen,
+} from '../notifications/passengerTripChatOpen';
 import OrderTripChatScreen from './OrderTripChatScreen';
 import { passengerOrderTripChatEnabled } from '@taxima/shared';
 
@@ -221,6 +226,37 @@ export default function ActiveOrderScreen({
   useEffect(() => {
     if (!chatAvailable && chatOpen) setChatOpen(false);
   }, [chatAvailable, chatOpen]);
+
+  const openTripChat = useCallback(() => {
+    if (!chatAvailable || chatOpen) return;
+    setChatUnread(0);
+    setChatOpen(true);
+    clearPendingPassengerTripChat(orderId);
+  }, [chatAvailable, chatOpen, orderId]);
+
+  useEffect(() => {
+    return subscribePassengerTripChatOpen((targetOrderId) => {
+      if (targetOrderId !== orderId) return;
+      openTripChat();
+    });
+  }, [orderId, openTripChat]);
+
+  useEffect(() => {
+    if (!chatAvailable) return;
+    if (peekPendingPassengerTripChatOrderId() === orderId) openTripChat();
+  }, [chatAvailable, orderId, openTripChat]);
+
+  const prevChatUnreadRef = useRef(0);
+  useEffect(() => {
+    if (!chatAvailable || chatOpen) {
+      prevChatUnreadRef.current = chatUnread;
+      return;
+    }
+    if (chatUnread > prevChatUnreadRef.current && chatUnread > 0) {
+      openTripChat();
+    }
+    prevChatUnreadRef.current = chatUnread;
+  }, [chatUnread, chatAvailable, chatOpen, openTripChat]);
 
   useEffect(() => {
     if (!chatAvailable || chatOpen) {

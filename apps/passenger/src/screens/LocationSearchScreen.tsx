@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useModalOverlayInsets } from '../components/ScreenSafeArea';
 import type { LatLng } from '../constants/demoDestinations';
 import { useI18n } from '../i18n/I18nProvider';
+import { resolvePassengerPlaceFromManualText } from '../location/resolvePassengerPlaceFromManualText';
 import { searchPlaces, type PlaceSuggestion } from '../location/placeSearch';
 import { colors } from '../theme/colors';
 import MapPickLocationScreen from './MapPickLocationScreen';
@@ -48,6 +49,19 @@ export default function LocationSearchScreen({
   const [searching, setSearching] = useState(false);
   const [locating, setLocating] = useState(false);
   const [mapPickOpen, setMapPickOpen] = useState(false);
+  const [manualSubmitting, setManualSubmitting] = useState(false);
+
+  const confirmManualAddress = async () => {
+    const trimmed = query.trim();
+    if (!trimmed || manualSubmitting) return;
+    setManualSubmitting(true);
+    try {
+      const place = await resolvePassengerPlaceFromManualText(trimmed, near ?? null);
+      if (place) onSelect(place);
+    } finally {
+      setManualSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     const debounce = setTimeout(() => {
@@ -55,7 +69,7 @@ export default function LocationSearchScreen({
       void searchPlaces(query, near ?? undefined)
         .then(setResults)
         .finally(() => setSearching(false));
-    }, 280);
+    }, 200);
     return () => clearTimeout(debounce);
   }, [query, near?.latitude, near?.longitude]);
 
@@ -94,8 +108,9 @@ export default function LocationSearchScreen({
               onChangeText={setQuery}
               placeholder={t('search.placeholder')}
               placeholderTextColor="#999"
-              returnKeyType="search"
+              returnKeyType="done"
               autoCorrect={false}
+              onSubmitEditing={() => void confirmManualAddress()}
             />
             {query.length > 0 && (
               <Pressable onPress={() => setQuery('')} hitSlop={8}>
@@ -133,6 +148,27 @@ export default function LocationSearchScreen({
             <Text style={styles.quickMuted}>{t('search.pickOnMap')}</Text>
           </Pressable>
         </View>
+
+        {query.trim().length > 0 ? (
+          <Pressable
+            style={styles.manualRow}
+            disabled={manualSubmitting}
+            onPress={() => void confirmManualAddress()}
+          >
+            {manualSubmitting ? (
+              <ActivityIndicator size="small" color={colors.brandYellow} />
+            ) : (
+              <Text style={styles.manualIcon}>✓</Text>
+            )}
+            <View style={styles.manualTextCol}>
+              <Text style={styles.manualTitle}>{t('search.useManualInput')}</Text>
+              <Text style={styles.manualHint} numberOfLines={2}>
+                {query.trim()}
+              </Text>
+              <Text style={styles.manualSub}>{t('search.useManualHint')}</Text>
+            </View>
+          </Pressable>
+        ) : null}
 
         <View style={styles.sectionHead}>
           <Text style={styles.sectionTitle}>{sectionTitle}</Text>
@@ -203,6 +239,23 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   sectionTitle: { color: '#b0b0b0', fontSize: 14, fontWeight: '600' },
+  manualRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    padding: 14,
+    borderRadius: 10,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.brandYellow,
+  },
+  manualIcon: { color: colors.brandYellow, fontSize: 22, fontWeight: '700', marginTop: 2 },
+  manualTextCol: { flex: 1 },
+  manualTitle: { color: colors.brandYellow, fontSize: 16, fontWeight: '700' },
+  manualHint: { color: colors.text, fontSize: 15, marginTop: 4, lineHeight: 21 },
+  manualSub: { color: colors.textMuted, fontSize: 12, marginTop: 6, lineHeight: 16 },
   resultRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

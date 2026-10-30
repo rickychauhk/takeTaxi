@@ -41,6 +41,7 @@ import { MODAL_SUPPORTED_ORIENTATIONS } from '../constants/modalOrientations';
 import type { BookingExtrasSelection } from './BookingMoreOptionsScreen';
 import { useTunnelRoutePreference } from '../hooks/useTunnelRoutePreference';
 import { fetchBookingOptions } from '../api/bookingOptions';
+import { useScheduledOrdersEnabled } from '../hooks/useScheduledOrdersEnabled';
 import type { PassengerPaymentMethod } from '../constants/paymentMethods';
 import { estimateUrbanTaxiTotal } from '../pricing/urbanTaxiFare';
 import ShootLocationSearchScreen from './ShootLocationSearchScreen';
@@ -251,6 +252,7 @@ export default function ShootOrderScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const { isLandscape } = useLayoutMode();
+  const scheduledOrdersEnabled = useScheduledOrdersEnabled();
   const { driver, refreshProfile } = useDriverAuth();
   const [pickup, setPickup] = useState<LatLng | null>(null);
   const [dropoff, setDropoff] = useState<LatLng>({ latitude: 22.3193, longitude: 114.1694, label: '' });
@@ -376,17 +378,25 @@ export default function ShootOrderScreen() {
   const voiceListening = voiceListeningState?.mode === 'trip';
 
   useEffect(() => {
-    void fetchBookingOptions().then(({ categories }) => {
+    void fetchBookingOptions().then(({ categories, scheduledOrdersEnabled: schedOn }) => {
       const map = new Map<string, number>();
       for (const cat of categories) {
         for (const opt of cat.options) map.set(opt.code, opt.id);
       }
       setOptionIdByCode(map);
       const nowId = map.get('now');
+      const schedId = map.get('scheduled');
       if (nowId) {
-        setBookingExtras((prev) =>
-          prev.selectedOptionIds.length ? prev : { ...prev, selectedOptionIds: [nowId] },
-        );
+        setBookingExtras((prev) => {
+          let ids = prev.selectedOptionIds.length ? [...prev.selectedOptionIds] : [nowId];
+          if (!schedOn) {
+            if (schedId != null) ids = ids.filter((id) => id !== schedId);
+            return { ...prev, scheduledAt: null, selectedOptionIds: ids.length ? ids : [nowId] };
+          }
+          return prev.selectedOptionIds.length ? prev : { ...prev, selectedOptionIds: ids };
+        });
+      } else if (!schedOn) {
+        setBookingExtras((prev) => ({ ...prev, scheduledAt: null }));
       }
     });
   }, []);
@@ -584,6 +594,7 @@ export default function ShootOrderScreen() {
   );
 
   const openSchedule = () => {
+    if (!scheduledOrdersEnabled) return;
     if (!validatePlaces()) return;
     setSchedulePickerVisible(true);
   };
@@ -768,12 +779,14 @@ export default function ShootOrderScreen() {
           >
             <Text style={styles.sideBtnIcon}>{voiceListening ? '🔴' : '🎤'}</Text>
           </Pressable>
-          <Pressable
-            style={[styles.sideBtn, isLandscape && styles.sideBtnLandscape, { backgroundColor: SHOOT_UI.scheduleGrey }]}
-            onPress={openSchedule}
-          >
-            <Text style={styles.sideBtnLabel}>預約</Text>
-          </Pressable>
+          {scheduledOrdersEnabled ? (
+            <Pressable
+              style={[styles.sideBtn, isLandscape && styles.sideBtnLandscape, { backgroundColor: SHOOT_UI.scheduleGrey }]}
+              onPress={openSchedule}
+            >
+              <Text style={styles.sideBtnLabel}>預約</Text>
+            </Pressable>
+          ) : null}
           <Pressable
             style={[
               styles.sideBtn,
@@ -873,30 +886,32 @@ export default function ShootOrderScreen() {
     <View style={styles.root}>
       <StatusBar barStyle="light-content" />
       <ScreenSafeArea style={styles.safe} edges={['top', 'left', 'right']}>
-        {isLandscape ? (
-          <View
-            style={[
-              styles.landscapeRoot,
-              { paddingBottom: Math.max(insets.bottom, 4) },
-            ]}
-          >
-            {formColumn}
-            <View style={styles.landscapeRight}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.scrollContent,
+            isLandscape && styles.landscapeScrollContent,
+            { paddingBottom: Math.max(insets.bottom, 8) },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator
+        >
+          {isLandscape ? (
+            <View style={styles.landscapeRoot}>
+              {formColumn}
+              <View style={styles.landscapeRight}>
+                {optionsBlock}
+                {bottomDirectBlock}
+              </View>
+            </View>
+          ) : (
+            <>
+              {formColumn}
               {optionsBlock}
               {bottomDirectBlock}
-            </View>
-          </View>
-        ) : (
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-          >
-            {formColumn}
-            {optionsBlock}
-            {bottomDirectBlock}
-          </ScrollView>
-        )}
+            </>
+          )}
+        </ScrollView>
       </ScreenSafeArea>
 
       {voiceListening && tripVoiceLiveHint ? (
@@ -948,17 +963,19 @@ export default function ShootOrderScreen() {
         ) : null}
       </Modal>
 
-      <I18nProvider>
-        <ScheduleTimePickerModal
-          visible={schedulePickerVisible}
-          initialIso={bookingExtras.scheduledAt}
-          onCancel={() => setSchedulePickerVisible(false)}
-          onConfirm={(iso) => {
-            setSchedulePickerVisible(false);
-            proceedToConfirmWithSchedule(iso);
-          }}
-        />
-      </I18nProvider>
+      {scheduledOrdersEnabled ? (
+        <I18nProvider>
+          <ScheduleTimePickerModal
+            visible={schedulePickerVisible}
+            initialIso={bookingExtras.scheduledAt}
+            onCancel={() => setSchedulePickerVisible(false)}
+            onConfirm={(iso) => {
+              setSchedulePickerVisible(false);
+              proceedToConfirmWithSchedule(iso);
+            }}
+          />
+        </I18nProvider>
+      ) : null}
     </View>
   );
 }
@@ -974,12 +991,13 @@ const styles = StyleSheet.create({
   sideCol: { width: 72, gap: 6, alignSelf: 'stretch' },
   sideColLandscape: { width: 64, gap: 4, alignSelf: 'stretch' },
   fullWidthBlock: { width: '100%', marginTop: 2 },
+  landscapeScrollContent: { flexGrow: 1 },
   landscapeRoot: {
-    flex: 1,
     flexDirection: 'row',
     gap: 6,
     paddingHorizontal: 4,
-    minHeight: 0,
+    alignItems: 'flex-start',
+    width: '100%',
   },
   portraitFormWrap: { width: '100%' },
   landscapeLeft: {
@@ -989,11 +1007,11 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     minHeight: 0,
   },
-  mainRowInnerLandscape: { flex: 1, minHeight: 0 },
-  landscapeRight: { flex: 1, minWidth: 0, justifyContent: 'space-between', gap: 4 },
-  landscapeOptions: { flex: 1, minHeight: 0, gap: 4 },
-  landscapeGridFill: { flex: 1, minHeight: 0, gap: 4, justifyContent: 'space-between' },
-  landscapeGridRowWrap: { flex: 1, minHeight: 0, justifyContent: 'center' },
+  mainRowInnerLandscape: { alignItems: 'stretch' },
+  landscapeRight: { flex: 1, minWidth: 0, gap: 4 },
+  landscapeOptions: { flex: 1, minWidth: 0, gap: 4 },
+  landscapeGridFill: { gap: 4 },
+  landscapeGridRowWrap: { gap: 2 },
   buttonRow: { flexDirection: 'row', gap: 4, marginBottom: 4, width: '100%' },
   buttonRowFlex: { flexDirection: 'row', gap: 4, flex: 1, width: '100%', minHeight: 0 },
   gridChipFlex: { flex: 1, minHeight: 0, alignSelf: 'stretch' },

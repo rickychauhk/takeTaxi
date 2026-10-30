@@ -22,6 +22,7 @@ export {
   getApiNetworkDegraded,
   isFetchNetworkError,
   markApiNetworkDegraded,
+  netInfoDeviceAppearsOffline,
   reportApiFetchFailure,
   reportApiFetchSuccess,
   subscribeApiNetworkStatus,

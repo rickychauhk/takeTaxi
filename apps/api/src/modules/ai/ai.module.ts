@@ -10,5 +10,6 @@ import { GeminiService } from './gemini.service';
   imports: [AdminAuthModule, SettingsModule, DocumentsModule],
   controllers: [AiController, GeminiAdminController],
   providers: [GeminiService],
+  exports: [GeminiService],
 })
 export class AiModule {}

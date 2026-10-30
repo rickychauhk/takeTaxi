@@ -46,6 +46,7 @@ import LiveOrdersPage from './pages/modules/LiveOrdersPage';
 import OrderChatQuickRepliesPage from './pages/modules/OrderChatQuickRepliesPage';
 import AppReleasesPage from './pages/modules/AppReleasesPage';
 import SettingsGeminiPage from './pages/modules/SettingsGeminiPage';
+import SettingsScheduledOrdersPage from './pages/modules/SettingsScheduledOrdersPage';
 
 const { Header, Sider, Content } = Layout;
 
@@ -103,6 +104,11 @@ const menuItems = [
   { key: '/app-releases', icon: <AndroidOutlined />, label: <Link to="/app-releases">APK 發佈</Link> },
   { key: '/booking-options', icon: <ControlOutlined />, label: <Link to="/booking-options">叫車選項</Link> },
   {
+    key: '/scheduled-orders',
+    icon: <ControlOutlined />,
+    label: <Link to="/scheduled-orders">預約叫車開關</Link>,
+  },
+  {
     key: '/order-chat-quick-replies',
     icon: <CommentOutlined />,
     label: <Link to="/order-chat-quick-replies">乘客快捷訊息</Link>,
@@ -157,6 +163,7 @@ function Shell() {
             <Route path="/ads" element={<AdsPage />} />
             <Route path="/app-releases" element={<AppReleasesPage />} />
             <Route path="/booking-options" element={<BookingOptionsPage />} />
+            <Route path="/scheduled-orders" element={<SettingsScheduledOrdersPage />} />
             <Route
               path="/order-chat-quick-replies"
               element={

@@ -24,6 +24,7 @@ import ScheduledOrdersScreen from '../screens/ScheduledOrdersScreen';
 import PurchasePointsScreen from '../screens/PurchasePointsScreen';
 import TodayCompletedOrdersScreen from '../screens/TodayCompletedOrdersScreen';
 import { useDriverSettings } from '../context/DriverSettingsContext';
+import { useScheduledOrdersEnabled } from '../hooks/useScheduledOrdersEnabled';
 import { colors } from '../theme/colors';
 import { navigationRef, tryOpenPushOrder } from './navigationRef';
 import type { MainTabParamList, RootStackParamList } from './types';
@@ -49,6 +50,7 @@ function MainTabs() {
   const { token, driver } = useDriverAuth();
   const { state } = useDriverSession();
   const { syncPickupRadiusFromStorage } = useDriverSettings();
+  const scheduledOrdersEnabled = useScheduledOrdersEnabled();
   const approved = isDriverApproved(driver?.verificationStatus);
   const gpsActive = Boolean(token && approved && state.online);
   useDriverLiveLocation(driver?.id, gpsActive);
@@ -90,11 +92,13 @@ function MainTabs() {
       })}
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ title: '大廳' }} />
-      <Tab.Screen
-        name="ScheduledOrders"
-        component={ScheduledOrdersScreen}
-        options={{ title: '預約' }}
-      />
+      {scheduledOrdersEnabled ? (
+        <Tab.Screen
+          name="ScheduledOrders"
+          component={ScheduledOrdersScreen}
+          options={{ title: '預約' }}
+        />
+      ) : null}
       <Tab.Screen name="ShootOrder" component={ShootOrderScreen} options={{ title: '出貨' }} />
       <Tab.Screen name="Earnings" component={EarningsScreen} options={{ title: '收入' }} />
       <Tab.Screen name="Settings" component={DriverSettingsScreen} options={{ title: '設定' }} />

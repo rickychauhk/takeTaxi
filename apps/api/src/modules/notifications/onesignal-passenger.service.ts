@@ -53,6 +53,20 @@ export class OneSignalPassengerService {
     );
   }
 
+  /** 預約用大廳逾時無人接單 → 系統自動取消 */
+  async sendScheduledOrderAutoCancelled(passengerId: string, orderId: string) {
+    return this.sendToExternalIds(
+      [passengerId],
+      '預約未能接單',
+      '用車時間已過 2 分鐘仍無司機接單，系統已自動取消你的預約柯打。如需用車請重新落單。',
+      {
+        recordInbox: true,
+        crmMessageId: null,
+        data: { type: 'order_cancelled', orderId: String(orderId) },
+      },
+    );
+  }
+
   /** 司機放出已接柯打 → 乘客重新等候接單 */
   async sendOrderReleasedToHall(passengerId: string, orderId: string) {
     return this.sendToExternalIds(
@@ -72,17 +86,23 @@ export class OneSignalPassengerService {
     const ids = [...new Set(externalIds.map((id) => String(id).trim()).filter(Boolean))];
     if (!ids.length) return { sent: 0, errors: [] };
 
+    const recordInbox = meta?.recordInbox !== false;
+    const crmMessageId = meta?.crmMessageId?.trim() || null;
+    const persistInbox = async () => {
+      if (!recordInbox) return;
+      await this.passengerInbox.recordDeliveries(ids, title, body, crmMessageId);
+    };
+
     const cfg = this.config();
     if (!cfg) {
       this.log.debug('OneSignal 乘客 App 未設定，略過 push');
+      await persistInbox();
       return { sent: 0, errors: ['OneSignal 乘客 App 未設定'] };
     }
 
     const errors: string[] = [];
     let sent = 0;
     const deliveredIds: string[] = [];
-    const recordInbox = meta?.recordInbox !== false;
-    const crmMessageId = meta?.crmMessageId?.trim() || null;
     const chunkSize = 2000;
     for (let i = 0; i < ids.length; i += chunkSize) {
       const chunk = ids.slice(i, i + chunkSize);
@@ -123,9 +143,8 @@ export class OneSignalPassengerService {
         errors.push(String(e));
       }
     }
-    if (recordInbox && deliveredIds.length) {
-      await this.passengerInbox.recordDeliveries(deliveredIds, title, body, crmMessageId);
-    }
+    /** App「訊息」列表以 DB 為準：即使未訂閱 push 或 OneSignal 失敗仍保留紀錄 */
+    await persistInbox();
     return { sent, errors };
   }
 }

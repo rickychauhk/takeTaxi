@@ -41,9 +41,17 @@ export class PointTopupsService {
   async listForAdmin(statusFilter?: string): Promise<PointTopupAdminRow[]> {
     const qb = this.repo.createQueryBuilder('t').orderBy('t.created_at', 'DESC').take(200);
     const raw = statusFilter?.trim();
+    const allowed = new Set(['pending', 'approved', 'rejected']);
     if (raw === 'queue' || raw === 'pending,rejected') {
       qb.andWhere('t.status IN (:...statuses)', { statuses: ['pending', 'rejected'] });
-    } else if (raw === 'pending' || raw === 'approved' || raw === 'rejected') {
+    } else if (raw && raw.includes(',')) {
+      const statuses = [
+        ...new Set(raw.split(',').map((s) => s.trim()).filter((s) => allowed.has(s))),
+      ];
+      if (statuses.length > 0) {
+        qb.andWhere('t.status IN (:...statuses)', { statuses });
+      }
+    } else if (raw && allowed.has(raw)) {
       qb.andWhere('t.status = :status', { status: raw });
     }
     const rows = await qb.getMany();
@@ -90,6 +98,11 @@ export class PointTopupsService {
     return { items, pendingCount: items.length, pendingPointsTotal };
   }
 
+  async saveReceiptTransferAt(id: string, transferAt: Date | null) {
+    if (!transferAt) return;
+    await this.repo.update({ id }, { transferAt });
+  }
+
   createPending(input: {
     driverId: string;
     amountPoints: number;
@@ -97,6 +110,7 @@ export class PointTopupsService {
     priceHkd?: number | null;
     receiptImagePath: string;
     bankName?: string;
+    paymentMethodId?: string | null;
     transferAt?: Date;
   }) {
     return this.repo.save(
@@ -105,12 +119,14 @@ export class PointTopupsService {
         amountPoints: String(input.amountPoints),
         packageId: input.packageId ?? null,
         priceHkd: input.priceHkd != null ? String(input.priceHkd) : null,
+        paymentMethodId: input.paymentMethodId ?? null,
         status: 'pending',
       }),
     );
   }
 
-  async review(adminId: number, id: string, approve: boolean, note?: string) {
+  /** @param adminId null = Gemini／系統自動審批 */
+  async review(adminId: number | null, id: string, approve: boolean, note?: string) {
     const topup = await this.repo.findOneBy({ id });
     if (!topup || topup.status !== 'pending') throw new NotFoundException('Top-up not found or already reviewed');
 
@@ -121,7 +137,7 @@ export class PointTopupsService {
 
     await this.dataSource.transaction(async (manager) => {
       topup.status = approve ? 'approved' : 'rejected';
-      topup.reviewedByAdminId = adminId;
+      topup.reviewedByAdminId = adminId ?? null;
       topup.reviewNote = reviewNote;
       await manager.save(topup);
 

@@ -102,6 +102,8 @@ type Props = {
   /** 預約 Tab：按預約時間排序 */
   orderSort?: 'newest' | 'scheduledNearest';
   confirmButtonLabel?: string;
+  /** 覆蓋 confirmButtonLabel（例如預約 Tab：未接／已接不同文案） */
+  confirmButtonLabelForOrder?: (order: OrderOffer) => string | undefined;
   /** 大廳：預約柯打按鈕顯示「接受預約」（仍走 onConfirmOrder 接單邏輯） */
   hallScheduledHintOnly?: boolean;
   /** 全屏大廳：唔顯示左上角標題／待派說明兩行 */
@@ -120,7 +122,7 @@ type Props = {
   scheduledStartTrip45MinGate?: boolean;
 };
 
-function isDriverReservedScheduledOrder(order: OrderOffer): boolean {
+export function isDriverReservedScheduledOrder(order: OrderOffer): boolean {
   return order.orderStatus === 'accepted' && !!order.scheduledAt?.trim();
 }
 
@@ -138,6 +140,7 @@ export function OrderBottomSheet({
   listTitle,
   orderSort = 'newest',
   confirmButtonLabel,
+  confirmButtonLabelForOrder,
   hallScheduledHintOnly = false,
   hideHallListHeader = false,
   hallDispatchReady = true,
@@ -239,6 +242,7 @@ export function OrderBottomSheet({
               onConfirmOrder?.(o);
             }}
             confirmButtonLabel={
+              confirmButtonLabelForOrder?.(o) ??
               confirmButtonLabel ??
               (hallScheduledHintOnly && o.scheduledAt?.trim() ? '接受預約' : undefined)
             }

@@ -192,14 +192,31 @@ function isDriverPostHallLobbyOptionLine(line: string): boolean {
   );
 }
 
-function hallLobbySetMealPriceLine(lines: string[]): string | null {
-  const price = lines.find((l) => /^價格：/.test(l.trim()));
-  return price?.trim() ?? null;
+function hallOrderIsSetMeal(
+  offer: Pick<OrderOffer, 'orderType' | 'bookingOptionLines'>,
+): boolean {
+  if (isDriverPostedHallOrder(offer)) {
+    return hallLobbyDriverPostDirectShortLabel(offer) === '定食';
+  }
+  return hallLobbyPromoShortLabel(offer) === '定食';
+}
+
+/** 定食柯打：booking 行常只有「定食／公司價」，大廳用 fareEstimate 補 HK$ */
+function hallLobbySetMealPriceDisplay(
+  offer: Pick<OrderOffer, 'orderType' | 'bookingOptionLines' | 'fareEstimateHkd'>,
+  lines: string[],
+): string | null {
+  if (!hallOrderIsSetMeal(offer)) return null;
+  const existing = lines.find((l) => /^價格：/.test(l.trim()))?.trim();
+  if (existing && /HK\$\d/.test(existing)) return existing;
+  const fare = Math.round(offer.fareEstimateHkd ?? 0);
+  if (fare > 0) return `價格：HK$${fare}`;
+  return existing ?? null;
 }
 
 function applyHallLobbyFooterCompactDriverPost(offer: OrderOffer, lines: string[]): string[] {
   const directShort = hallLobbyDriverPostDirectShortLabel(offer);
-  const setMealPrice = directShort === '定食' ? hallLobbySetMealPriceLine(lines) : null;
+  const setMealPrice = hallLobbySetMealPriceDisplay(offer, lines);
   const stripped = stripDriverPostHallLobbyMetaLines(lines);
   const optionLines = lines.filter(isDriverPostHallLobbyOptionLine);
   const mergedOptions = [...optionLines];
@@ -342,7 +359,7 @@ function applyHallLobbyFooterCompact(offer: OrderOffer, lines: string[]): string
     if (kind === 'company') return [HALL_LOBBY_COMPANY_SHORT];
     const promo = hallLobbyPromoShortLabel(offer);
     if (!promo) return [];
-    const setMealPrice = promo === '定食' ? hallLobbySetMealPriceLine(lines) : null;
+    const setMealPrice = hallLobbySetMealPriceDisplay(offer, lines);
     return setMealPrice ? [promo, setMealPrice] : [promo];
   }
 
@@ -353,6 +370,8 @@ function applyHallLobbyFooterCompact(offer: OrderOffer, lines: string[]): string
     const promo = hallLobbyPromoShortLabel(offer);
     if (promo && !out.includes(promo)) out.unshift(promo);
   }
+  const setMealPrice = hallLobbySetMealPriceDisplay(offer, lines);
+  if (setMealPrice && !out.includes(setMealPrice)) out.push(setMealPrice);
   return out;
 }
 
@@ -417,9 +436,8 @@ export function hallOrderExtraLines(
     if (isHallPhoneDisplayLine(t)) continue;
     if (forHallLobby && isHallPassengerRequestLine(t)) continue;
     if (omitContact && lineMentionsContact(t)) continue;
-    if (isScheduled && /^預約時間：/.test(t)) continue;
-    if (!isScheduled && /^用車時間：/.test(t)) continue;
-    if (!isScheduled && /^預約時間：/.test(t)) continue;
+    if (isScheduled && (/^預約時間：/.test(t) || /^用車時間：/.test(t))) continue;
+    if (!isScheduled && (/^用車時間：/.test(t) || /^預約時間：/.test(t))) continue;
     lines.push(t);
   }
 
@@ -447,7 +465,8 @@ export function hallOrderExtraLines(
     return forHallLobby ? applyHallLobbyFooterCompact(offer, posted) : posted;
   }
 
-  if (isScheduled) {
+  /** 大廳／預約列表卡片左上角已有「預約 …」，footer 唔重複用車時間 */
+  if (isScheduled && !forHallLobby) {
     const timeLabel = formatHallScheduledAtLabel(offer.scheduledAt!);
     let replaced = false;
     for (let i = 0; i < lines.length; i++) {
@@ -524,10 +543,20 @@ export function isHallPhoneDisplayLine(line: string): boolean {
   return t.startsWith(SHOOT_GUEST_PHONE_PREFIX) || t.startsWith(SHOOT_OWNER_PHONE_PREFIX);
 }
 
+/** 大廳 footer：「其他：xxx」只顯示 xxx（類別名稱唔重複） */
+function hallLobbyFormatFooterSegment(segment: string): string {
+  const t = segment.trim();
+  if (!t) return '';
+  if (/^其他[：:]/.test(t)) {
+    return t.replace(/^其他[：:]\s*/, '').trim();
+  }
+  return t;
+}
+
 function stripPhoneSegmentsFromJoinedText(text: string): string {
   return text
     .split(/\s*·\s*/)
-    .map((p) => p.trim())
+    .map((p) => hallLobbyFormatFooterSegment(p))
     .filter(
       (p) =>
         p &&

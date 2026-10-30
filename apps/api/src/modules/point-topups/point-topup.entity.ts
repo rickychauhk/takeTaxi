@@ -23,6 +23,9 @@ export class PointTopupEntity {
   @Column({ name: 'bank_name', type: 'varchar', length: 128, nullable: true })
   bankName!: string | null;
 
+  @Column({ name: 'payment_method_id', type: 'varchar', length: 64, nullable: true })
+  paymentMethodId!: string | null;
+
   @Column({ name: 'transfer_at', type: 'datetime', nullable: true })
   transferAt!: Date | null;
 

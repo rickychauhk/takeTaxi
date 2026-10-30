@@ -6,6 +6,9 @@ import { resolveLabelForCoords } from './resolveLabelForCoords';
 
 export type PlaceSuggestion = LatLng & { id: string };
 
+/** 乘客選點列表上限（盡量俾多啲選擇） */
+export const PASSENGER_PLACE_SUGGESTIONS_LIMIT = 20;
+
 function demoMatches(query: string): PlaceSuggestion[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
@@ -35,34 +38,31 @@ export async function searchPlaces(query: string, near?: { latitude: number; lon
             (d.latitude - near.latitude) ** 2 + (d.longitude - near.longitude) ** 2,
         }))
         .sort((a, b) => a.dist - b.dist)
-        .slice(0, 8)
+        .slice(0, PASSENGER_PLACE_SUGGESTIONS_LIMIT)
         .map((d, i) => ({ ...toLocalizedLatLng(d), id: `near-${i}` }));
     }
-    return DEMO_DESTINATIONS.slice(0, 5).map((d, i) => ({
+    return DEMO_DESTINATIONS.map((d, i) => ({
       ...toLocalizedLatLng(d),
       id: `default-${i}`,
     }));
   }
 
+  if (trimmed.length === 1) {
+    return demoMatches(trimmed).slice(0, PASSENGER_PLACE_SUGGESTIONS_LIMIT);
+  }
+
   const fromDemo = demoMatches(trimmed);
-  let fromGeocoder: PlaceSuggestion[] = [];
-  try {
-    fromGeocoder = await fetchPlaceSearchFromApi(trimmed, near);
-  } catch {
-    fromGeocoder = [];
-  }
-  if (fromGeocoder.length < 4) {
-    try {
-      const local = await searchGooglePlacesForward(trimmed, near);
-      fromGeocoder = [...fromGeocoder, ...local];
-    } catch {
-      /* client google failed */
-    }
-  }
-  if (fromGeocoder.length < 8) {
+  const [fromApi, fromGoogle] = await Promise.all([
+    fetchPlaceSearchFromApi(trimmed, near).catch(() => [] as PlaceSuggestion[]),
+    trimmed.length >= 2
+      ? searchGooglePlacesForward(trimmed, near).catch(() => [] as PlaceSuggestion[])
+      : Promise.resolve([] as PlaceSuggestion[]),
+  ]);
+  let fromGeocoder: PlaceSuggestion[] = [...fromApi, ...fromGoogle];
+  if (fromGeocoder.length < PASSENGER_PLACE_SUGGESTIONS_LIMIT) {
     try {
       const rows = await Location.geocodeAsync(hkGeocodeQuery(trimmed));
-      const expoItems = rows.slice(0, 6).map((row, i) => ({
+      const expoItems = rows.slice(0, 10).map((row, i) => ({
         id: `geo-${i}-${row.latitude}-${row.longitude}`,
         latitude: row.latitude,
         longitude: row.longitude,
@@ -86,7 +86,7 @@ export async function searchPlaces(query: string, near?: { latitude: number; lon
   const seen = new Set<string>();
   const merged: PlaceSuggestion[] = [];
   for (const item of [...fromGeocoder, ...fromDemo]) {
-    const key = `${item.latitude.toFixed(4)},${item.longitude.toFixed(4)}`;
+    const key = `${item.latitude.toFixed(5)},${item.longitude.toFixed(5)}|${item.label.trim()}`;
     if (seen.has(key)) continue;
     seen.add(key);
     merged.push(item);
@@ -102,5 +102,5 @@ export async function searchPlaces(query: string, near?: { latitude: number; lon
     };
     return score(a.label) - score(b.label);
   });
-  return merged.slice(0, 12);
+  return merged.slice(0, PASSENGER_PLACE_SUGGESTIONS_LIMIT);
 }
