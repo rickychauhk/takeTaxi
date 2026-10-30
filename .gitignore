@@ -10,3 +10,11 @@ coverage/
 uploads/
 .data/
 *.pem
+dist-apk/
+*.apk
+.env.local
+.expo/
+**/ios/Pods/
+**/ios/build/
+**/android/.gradle/
+**/android/app/build/

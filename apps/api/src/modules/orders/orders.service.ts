@@ -42,12 +42,12 @@ import type { DriverAvailableOrderDto } from './driver-available-order.types';
 import { PASSENGER_MATCHING_WATCH_TTL_MS } from './passenger-matching-watch.constants';
 import {
   haversineKm,
-  isFutureScheduledAt,
   isWithinDriverPickupRadius,
 } from './driver-pickup-radius.util';
 import { AdminMailService } from '../notifications/admin-mail.service';
 import { LocationsService } from '../locations/locations.service';
 import { OrderChatService } from '../order-chat/order-chat.service';
+import { SettingsService } from '../settings/settings.service';
 import { MapsPlaceSearchService } from '../maps/maps-place-search.service';
 import { MapsService } from '../maps/maps.service';
 
@@ -275,6 +275,7 @@ export class OrdersService {
     private readonly adminMail: AdminMailService,
     private readonly mapsPlaceSearch: MapsPlaceSearchService,
     private readonly maps: MapsService,
+    private readonly settings: SettingsService,
   ) {}
 
   /** 大廳顯示：司機→上車點行車公里（Distance Matrix） */
@@ -1077,6 +1078,9 @@ export class OrdersService {
 
     let scheduledAtDate: Date | null = null;
     if (input.scheduledAt?.trim()) {
+      if (!(await this.settings.isScheduledOrdersEnabled())) {
+        throw new BadRequestException('預約叫車功能已暫停');
+      }
       scheduledAtDate = new Date(input.scheduledAt);
       if (Number.isNaN(scheduledAtDate.getTime())) {
         throw new BadRequestException('Invalid scheduledAt');
@@ -1242,6 +1246,9 @@ export class OrdersService {
 
     let scheduledAtDate: Date | null = null;
     if (input.scheduledAt?.trim()) {
+      if (!(await this.settings.isScheduledOrdersEnabled())) {
+        throw new BadRequestException('預約叫車功能已暫停');
+      }
       scheduledAtDate = new Date(input.scheduledAt);
       if (Number.isNaN(scheduledAtDate.getTime())) {
         throw new BadRequestException('Invalid scheduledAt');
@@ -2948,17 +2955,16 @@ export class OrdersService {
     return this.buildDriverAvailableDtosForOrders(visible, stopMap);
   }
 
-  /** 大廳：只顯示非預約柯打，且上車點在司機設定公里數內（≤） */
+  /** 大廳：待接 instant + 未接預約（matching/pending）；上車點在司機設定公里數內（≤） */
   async listForDriver(
     driverId: string,
     maxPickupRadiusKm?: number | null,
     driverPosition?: { lat: number; lng: number } | null,
   ) {
     const dtos = await this.listOpenMatchingDtosForDriver(driverId);
-    const instantDtos = dtos.filter((d) => !isFutureScheduledAt(d.scheduledAt));
     const filtered = await this.filterDtosByDriverPickupRadius(
       driverId,
-      instantDtos,
+      dtos,
       maxPickupRadiusKm,
       driverPosition,
     );
@@ -3015,26 +3021,14 @@ export class OrdersService {
     return withPhone;
   }
 
-  /** 待接預約柯打：大廳可接 + 本人已接受預約，按預約時間由近到遠 */
+  /** 預約 Tab：此司機已接受、尚未開始的 future scheduled（未接單見大廳 listForDriver） */
   async listScheduledForDriver(
     driverId: string,
     _maxPickupRadiusKm?: number | null,
     _driverPosition?: { lat: number; lng: number } | null,
   ): Promise<DriverAvailableOrderDto[]> {
-    const [openRows, reservedRows] = await Promise.all([
-      this.listOpenMatchingDtosForDriver(driverId),
-      this.listDriverReservedScheduledOrders(driverId, null, null),
-    ]);
-    const openScheduled = openRows.filter((d) => isFutureScheduledAt(d.scheduledAt));
-    /** 只隱藏「仍在大廳、司機曾放出」的預約；重新接回後在 reservedRows，須顯示 */
-    const released = await this.orderIdsDriverReleasedToHall(
-      driverId,
-      openScheduled.map((d) => d.orderId),
-    );
-    const openScheduledVisible = openScheduled.filter((d) => !released.has(d.orderId));
-    const byId = new Map<string, DriverAvailableOrderDto>();
-    for (const d of [...openScheduledVisible, ...reservedRows]) byId.set(d.orderId, d);
-    return [...byId.values()].sort(
+    const reservedRows = await this.listDriverReservedScheduledOrders(driverId, null, null);
+    return [...reservedRows].sort(
       (a, b) => Date.parse(a.scheduledAt!) - Date.parse(b.scheduledAt!),
     );
   }
@@ -3218,5 +3212,33 @@ export class OrdersService {
 
   async driverMisacceptCancel(driverId: string, orderId: string) {
     return this.driverReleaseOrderToHall(driverId, orderId);
+  }
+
+  /**
+   * 預約柯打仍在大廳（pending/matching）：用車時間 + 120 秒仍無司機接單 → 系統取消並通知乘客。
+   * @returns 是否本次成功取消
+   */
+  async trySystemCancelExpiredOpenScheduledOrder(orderId: string): Promise<boolean> {
+    const order = await this.orders.findOneBy({ id: orderId });
+    if (!order?.scheduledAt) return false;
+    if (order.status !== 'pending' && order.status !== 'matching') return false;
+    if (order.driverId) return false;
+    const deadlineMs = order.scheduledAt.getTime() + 120_000;
+    if (Date.now() < deadlineMs) return false;
+
+    const passengerId = order.passengerId?.trim() || null;
+    await this.applyOrderCancellation(
+      order,
+      order.status,
+      'system',
+      null,
+      'scheduled_unaccepted_auto_cancel',
+    );
+
+    if (passengerId) {
+      void this.oneSignalPassenger.sendScheduledOrderAutoCancelled(passengerId, orderId);
+    }
+
+    return true;
   }
 }

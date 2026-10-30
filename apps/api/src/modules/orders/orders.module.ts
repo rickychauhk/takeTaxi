@@ -19,6 +19,7 @@ import { OrderVisibilityService } from './order-visibility.service';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 import { ScheduledOrderReminderService } from './scheduled-order-reminder.service';
+import { ScheduledOrderAutoCancelService } from './scheduled-order-auto-cancel.service';
 import { PassengerMatchingWatchService } from './passenger-matching-watch.service';
 import { OrderChatModule } from '../order-chat/order-chat.module';
 import { SettingsModule } from '../settings/settings.module';
@@ -52,6 +53,7 @@ import { MapsModule } from '../maps/maps.module';
     OrdersService,
     OrderVisibilityService,
     ScheduledOrderReminderService,
+    ScheduledOrderAutoCancelService,
     PassengerMatchingWatchService,
   ],
   exports: [OrdersService],

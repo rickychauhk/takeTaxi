@@ -27,7 +27,7 @@ export class MapsPlaceSearchService {
 
     const add = (item: PlaceSearchItem | null) => {
       if (!item) return;
-      const k = `${item.latitude.toFixed(5)},${item.longitude.toFixed(5)}`;
+      const k = `${item.latitude.toFixed(5)},${item.longitude.toFixed(5)}|${item.label.trim()}`;
       const prev = merged.get(k);
       if (!prev || rankPlaceLabelSpecificity(trimmed, item.label) > rankPlaceLabelSpecificity(trimmed, prev.label)) {
         merged.set(k, item);
@@ -39,12 +39,12 @@ export class MapsPlaceSearchService {
       for (const item of await this.textSearch(q, key, near)) add(item);
       for (const item of await this.findPlaceFromText(q, key, near)) add(item);
       for (const item of await this.geocode(q, key)) add(item);
-      if (merged.size >= 12) break;
+      if (merged.size >= 20) break;
     }
 
     const items = [...merged.values()]
       .sort((a, b) => rankPlaceLabelSpecificity(trimmed, b.label) - rankPlaceLabelSpecificity(trimmed, a.label))
-      .slice(0, 12);
+      .slice(0, 20);
 
     return { items };
   }
@@ -95,7 +95,7 @@ export class MapsPlaceSearchService {
     if (data?.status !== 'OK' || !data.predictions?.length) return [];
 
     const out: PlaceSearchItem[] = [];
-    for (const p of data.predictions.slice(0, 6)) {
+    for (const p of data.predictions.slice(0, 12)) {
       if (!p.place_id) continue;
       const d = await this.placeDetails(p.place_id, key);
       if (d) {
@@ -157,7 +157,7 @@ export class MapsPlaceSearchService {
       }[];
     }>(`https://maps.googleapis.com/maps/api/place/textsearch/json?${params}`);
     if (data?.status !== 'OK' || !data.results?.length) return [];
-    return data.results.slice(0, 6).flatMap((r, i) => {
+    return data.results.slice(0, 10).flatMap((r, i) => {
       const lat = r.geometry?.location?.lat;
       const lng = r.geometry?.location?.lng;
       const label = r.name?.trim() || r.formatted_address?.trim();
@@ -188,7 +188,7 @@ export class MapsPlaceSearchService {
       }[];
     }>(`https://maps.googleapis.com/maps/api/place/findplacefromtext/json?${params}`);
     if (data?.status !== 'OK' || !data.candidates?.length) return [];
-    return data.candidates.slice(0, 4).flatMap((c, i) => {
+    return data.candidates.slice(0, 5).flatMap((c, i) => {
       const lat = c.geometry?.location?.lat;
       const lng = c.geometry?.location?.lng;
       const label = c.name?.trim() || c.formatted_address?.trim();
@@ -212,7 +212,7 @@ export class MapsPlaceSearchService {
       }[];
     }>(`https://maps.googleapis.com/maps/api/geocode/json?${params}`);
     if (data?.status !== 'OK' || !data.results?.length) return [];
-    return data.results.slice(0, 5).flatMap((r, i) => {
+    return data.results.slice(0, 8).flatMap((r, i) => {
       const lat = r.geometry?.location?.lat;
       const lng = r.geometry?.location?.lng;
       const label = r.formatted_address?.trim();

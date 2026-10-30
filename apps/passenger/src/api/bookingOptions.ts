@@ -27,12 +27,16 @@ export type BookingOptionCategoryDto = {
 };
 
 export type BookingOptionsPayload = {
+  scheduledOrdersEnabled?: boolean;
   categories: BookingOptionCategoryDto[];
 };
 
 export async function fetchBookingOptions(): Promise<BookingOptionsPayload> {
   const res = await fetch(`${baseUrl}/passenger/booking-options`);
-  if (!res.ok) return { categories: [] };
+  if (!res.ok) return { categories: [], scheduledOrdersEnabled: true };
   const data = (await res.json()) as BookingOptionsPayload;
-  return { categories: Array.isArray(data.categories) ? data.categories : [] };
+  return {
+    scheduledOrdersEnabled: data.scheduledOrdersEnabled !== false,
+    categories: Array.isArray(data.categories) ? data.categories : [],
+  };
 }

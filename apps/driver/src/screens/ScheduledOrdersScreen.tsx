@@ -4,7 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { releaseDriverOrder } from '../api/orders';
 import { useDriverAuth } from '../auth/DriverAuthContext';
 import { DriverCancelOrderSheet } from '../components/DriverCancelOrderSheet';
-import { OrderBottomSheet } from '../components/OrderBottomSheet';
+import {
+  isDriverReservedScheduledOrder,
+  OrderBottomSheet,
+} from '../components/OrderBottomSheet';
 import { useDriverSettings } from '../context/DriverSettingsContext';
 import { useDriverSession } from '../context/DriverSessionContext';
 import { useAcceptDriverOrder } from '../hooks/useAcceptDriverOrder';
@@ -18,6 +21,7 @@ import { DRIVER_PENDING_APPROVAL_MSG, isDriverApproved } from '../constants/driv
 import { orderWithinPickupRadius } from '../geo/orderPickupDistance';
 import { requestDriverOrdersRefresh } from '../realtime/driverOrdersSocket';
 import { requestScheduledOrdersRefresh } from '../realtime/driverScheduledOrdersRefresh';
+import { scheduledOrderHallHintMessage } from '../trip/driverHallOrderDisplay';
 import { colors } from '../theme/colors';
 
 export default function ScheduledOrdersScreen() {
@@ -74,11 +78,26 @@ export default function ScheduledOrdersScreen() {
   );
 
   const onConfirmOrder = useCallback(
-    (order: OrderOffer) => {
+    async (order: OrderOffer) => {
       if (!guardOrderAccept(order)) return;
+      if (isDriverReservedScheduledOrder(order)) {
+        const ok = await acceptOffer(order, { startScheduledTrip: true });
+        if (ok) refreshLists();
+        return;
+      }
+      if (order.scheduledAt?.trim()) {
+        const ok = await acceptOffer(order, { reserveOnly: true });
+        if (!ok) return;
+        requestScheduledOrdersRefresh();
+        refreshLists();
+        Alert.alert('已接受預約', scheduledOrderHallHintMessage(order.scheduledAt), [
+          { text: '知道了' },
+        ]);
+        return;
+      }
       void acceptOffer(order);
     },
-    [acceptOffer, guardOrderAccept],
+    [acceptOffer, guardOrderAccept, refreshLists],
   );
 
   const onCancelReservedOrder = useCallback(
@@ -148,7 +167,9 @@ export default function ScheduledOrdersScreen() {
             hallFullscreen
             listTitle="已預約訂單"
             orderSort="scheduledNearest"
-            confirmButtonLabel="開始接客"
+            confirmButtonLabelForOrder={(o) =>
+              isDriverReservedScheduledOrder(o) ? '開始接客' : '接受預約'
+            }
             scheduledStartTrip45MinGate
           />
         </View>

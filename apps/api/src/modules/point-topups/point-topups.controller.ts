@@ -22,6 +22,7 @@ import { DriverEntity } from '../drivers/driver.entity';
 import { DriverPointPackagesService } from '../driver-point-packages/driver-point-packages.service';
 import { SettingsService } from '../settings/settings.service';
 import { PointTopupEntity } from './point-topup.entity';
+import { PointTopupGeminiReviewService } from './point-topup-gemini-review.service';
 import { PointTopupsService } from './point-topups.service';
 
 class ReviewTopupDto {
@@ -61,6 +62,7 @@ export class PointTopupsController {
     private readonly topups: PointTopupsService,
     private readonly packages: DriverPointPackagesService,
     private readonly settings: SettingsService,
+    private readonly topupGemini: PointTopupGeminiReviewService,
   ) {}
 
   @UseGuards(DriverAuthGuard)
@@ -117,14 +119,17 @@ export class PointTopupsController {
       throw new BadRequestException('請選擇付款方式');
     }
 
-    return this.topups.createPending({
+    const saved = await this.topups.createPending({
       driverId: req.driver.id,
       amountPoints,
       packageId,
       priceHkd,
       receiptImagePath,
       bankName,
+      paymentMethodId: paymentMethodId ?? null,
     });
+    this.topupGemini.scheduleReview(String(saved.id));
+    return saved;
   }
 
   /** @deprecated 舊版無 token 上傳；保留相容 */
@@ -165,5 +170,12 @@ export class PointTopupsController {
     const note = dto.note?.trim();
     if (!note) throw new BadRequestException('請填寫拒絕原因');
     return this.topups.review(req.admin.sub, id, false, note);
+  }
+
+  /** CRM：對待審申請重新執行 Gemini 3.8 Flash 自動審批 */
+  @UseGuards(AdminAuthGuard)
+  @Post('admin/point-topups/:id/gemini-review')
+  async geminiReview(@Param('id') id: string) {
+    return this.topupGemini.reviewPendingTopup(id);
   }
 }

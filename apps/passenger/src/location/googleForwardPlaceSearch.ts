@@ -121,7 +121,7 @@ async function autocompleteSearch(
   }>(`https://maps.googleapis.com/maps/api/place/autocomplete/json?${params}`);
   if (data?.status !== 'OK' || !data.predictions?.length) return [];
 
-  const picks = data.predictions.slice(0, 8);
+  const picks = data.predictions.slice(0, 12);
   const details = await Promise.all(
     picks.map(async (p) => {
       if (!p.place_id) return null;
@@ -147,7 +147,7 @@ async function textSearch(query: string, key: string, near?: { latitude: number;
     results?: { name?: string; formatted_address?: string; geometry?: { location?: { lat?: number; lng?: number } } }[];
   }>(`https://maps.googleapis.com/maps/api/place/textsearch/json?${params}`);
   if (data?.status !== 'OK' || !data.results?.length) return [];
-  return data.results.slice(0, 6).flatMap((r, i) => {
+  return data.results.slice(0, 10).flatMap((r, i) => {
     const lat = r.geometry?.location?.lat;
     const lng = r.geometry?.location?.lng;
     const label = r.name?.trim() || r.formatted_address?.trim();
@@ -171,7 +171,7 @@ async function geocodeSearch(query: string, key: string): Promise<PlaceSuggestio
     if (data?.status !== 'OK' || !data.results?.length) continue;
 
     const items: PlaceSuggestion[] = [];
-    for (let i = 0; i < Math.min(data.results.length, 8); i++) {
+    for (let i = 0; i < Math.min(data.results.length, 10); i++) {
       const r = data.results[i]!;
       const loc = (r as { geometry?: { location?: { lat?: number; lng?: number } } }).geometry
         ?.location;
@@ -211,7 +211,7 @@ export async function searchGooglePlacesForward(
   const merged = new Map<string, PlaceSuggestion>();
   const add = (items: PlaceSuggestion[]) => {
     for (const item of items) {
-      const k = `${item.latitude.toFixed(5)},${item.longitude.toFixed(5)}`;
+      const k = `${item.latitude.toFixed(5)},${item.longitude.toFixed(5)}|${item.label.trim()}`;
       const prev = merged.get(k);
       if (!prev || rankSpecificity(trimmed, item.label) > rankSpecificity(trimmed, prev.label)) {
         merged.set(k, item);
@@ -223,10 +223,10 @@ export async function searchGooglePlacesForward(
     add(await autocompleteSearch(q, key, near));
     add(await textSearch(q, key, near));
     add(await geocodeSearch(q, key));
-    if (merged.size >= 10) break;
+    if (merged.size >= 18) break;
   }
 
   return [...merged.values()]
     .sort((a, b) => rankSpecificity(trimmed, b.label) - rankSpecificity(trimmed, a.label))
-    .slice(0, 12);
+    .slice(0, 20);
 }

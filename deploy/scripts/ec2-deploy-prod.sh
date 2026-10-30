@@ -32,6 +32,9 @@ rsync -avz --delete \
   --exclude '*.pem' \
   "${REPO_DIR}/" "ec2-user@${EC2_HOST}:${APP_DIR}/"
 
+echo "==> Nginx: PROD TLS is app.hktaketaxi.online only — drop stray UAT vhost files"
+ssh_cmd "sudo rm -f /etc/nginx/conf.d/0-000-taxima.hkcodai.space.conf /etc/nginx/conf.d/taxima.hkcodai.space.conf" || true
+
 echo "==> Nginx config + maintenance snippet"
 ssh_cmd "sudo APP_DIR=${APP_DIR} NGINX_SITE_CONF=${NGINX_SITE_CONF} NGINX_TARGET=${NGINX_TARGET} bash ${APP_DIR}/deploy/scripts/ec2-nginx-sync.sh"
 

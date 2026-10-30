@@ -1,12 +1,13 @@
-import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
+import NetInfo from '@react-native-community/netinfo';
 import {
   clearApiNetworkDegraded,
   getApiNetworkDegraded,
   markApiNetworkDegraded,
+  netInfoDeviceAppearsOffline,
   reportApiFetchSuccess,
   subscribeApiNetworkStatus,
 } from '@taxima/shared';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -21,12 +22,6 @@ import { colors } from '../theme/colors';
 
 const RETRY_INTERVAL_MS = 4_000;
 
-function netInfoLooksOffline(state: NetInfoState): boolean {
-  if (state.isConnected === false) return true;
-  if (state.isInternetReachable === false) return true;
-  return false;
-}
-
 function NetworkOfflineBanner() {
   const insets = useSafeAreaInsets();
   const { t } = useI18n();
@@ -35,14 +30,20 @@ function NetworkOfflineBanner() {
   const [retrying, setRetrying] = useState(false);
 
   const syncApiFlag = useCallback(() => {
-    setApiDegraded(getApiNetworkDegraded());
+    const degraded = getApiNetworkDegraded();
+    setApiDegraded(degraded);
+    if (!degraded) {
+      void NetInfo.fetch().then((state) => {
+        if (!netInfoDeviceAppearsOffline(state)) setDeviceOffline(false);
+      });
+    }
   }, []);
 
   const runConnectivityCheck = useCallback(async () => {
     setRetrying(true);
     try {
       const state = await NetInfo.fetch();
-      const offline = netInfoLooksOffline(state);
+      const offline = netInfoDeviceAppearsOffline(state);
       setDeviceOffline(offline);
       if (offline) {
         markApiNetworkDegraded();
@@ -54,6 +55,7 @@ function NetworkOfflineBanner() {
         clearApiNetworkDegraded();
         reportApiFetchSuccess();
         setApiDegraded(false);
+        setDeviceOffline(false);
       } else {
         markApiNetworkDegraded();
         setApiDegraded(true);
@@ -63,12 +65,17 @@ function NetworkOfflineBanner() {
     }
   }, []);
 
+  const runCheckRef = useRef(runConnectivityCheck);
+  runCheckRef.current = runConnectivityCheck;
+
   useEffect(() => {
     const unsubNet = NetInfo.addEventListener((state) => {
-      setDeviceOffline(netInfoLooksOffline(state));
+      const offline = netInfoDeviceAppearsOffline(state);
+      setDeviceOffline(offline);
+      if (!offline) void runCheckRef.current();
     });
     void NetInfo.fetch().then((state) => {
-      setDeviceOffline(netInfoLooksOffline(state));
+      setDeviceOffline(netInfoDeviceAppearsOffline(state));
     });
     const unsubApi = subscribeApiNetworkStatus(syncApiFlag);
     return () => {

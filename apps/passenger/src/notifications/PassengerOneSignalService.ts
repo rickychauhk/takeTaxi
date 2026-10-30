@@ -3,6 +3,7 @@ import Constants from 'expo-constants';
 import { Alert, NativeModules } from 'react-native';
 import { appendPassengerPushInbox } from '../storage/passengerPushInbox';
 import { isPassengerOneSignalEnabled } from './passengerOneSignalPlatform';
+import { requestOpenPassengerTripChat } from './passengerTripChatOpen';
 
 type OneSignalModule = typeof import('react-native-onesignal');
 
@@ -193,7 +194,18 @@ type PushNotifPayload = {
   notificationId?: string;
   title?: string;
   body?: string;
+  additionalData?: object;
 };
+
+function orderIdFromOrderChatPush(additionalData?: object): string | null {
+  if (!additionalData || typeof additionalData !== 'object') return null;
+  const d = additionalData as Record<string, unknown>;
+  if (d.type !== 'order_chat') return null;
+  const orderId = d.orderId;
+  if (typeof orderId !== 'string') return null;
+  const id = orderId.trim();
+  return id || null;
+}
 
 function savePushToInbox(notification: PushNotifPayload): void {
   void appendPassengerPushInbox({
@@ -219,10 +231,21 @@ export function attachPassengerPushInboxListener(): () => void {
         ? event.getNotification()
         : event.notification;
     if (!notification) return;
+    const chatOrderId = orderIdFromOrderChatPush(notification.additionalData);
+    if (chatOrderId) {
+      requestOpenPassengerTripChat(chatOrderId);
+      notification.display?.();
+      return;
+    }
     savePushToInbox(notification);
     notification.display?.();
   };
-  const onClick = (event: Ev) => {
+  const onClick = (event: { notification: PushNotifPayload }) => {
+    const chatOrderId = orderIdFromOrderChatPush(event.notification.additionalData);
+    if (chatOrderId) {
+      requestOpenPassengerTripChat(chatOrderId);
+      return;
+    }
     savePushToInbox(event.notification);
   };
 
